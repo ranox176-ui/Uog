@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rose Day Special Garden</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Playfair Display', serif;
+            color: white;
+            user-select: none;
+        }
+
+        .page {
+            position: absolute;
+            width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 1.2s ease-in-out;
+            z-index: 10;
+            background: black;
+        }
+
+        .hidden { opacity: 0; pointer-events: none; }
+
+        .story-text {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* Buttons for Page 1 */
+        .choice-btns { display: flex; gap: 20px; }
+        .choice-btn {
+            padding: 12px 40px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: transparent;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            transition: 0.3s;
+        }
+        .choice-btn:hover { background: white; color: black; }
+
+        /* Garden UI */
+        #garden-ui {
+            position: absolute; top: 8%; width: 100%;
+            text-align: center; z-index: 5; pointer-events: none;
+        }
+        
+        /* Happy Rose Day Text */
+        .rose-day-text {
+            font-size: 55px;
+            font-weight: 700;
+            color: #ff4d6d;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(255, 77, 109, 0.6);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #ff4d6d; }
+            to { text-shadow: 0 0 30px #ff4d6d, 0 0 10px #fff; }
+        }
+
+        #garden-ui p { font-size: 16px; opacity: 0.8; margin-top: 10px; }
+
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+
+        .controls {
+            position: absolute; bottom: 50px; left: 50%;
+            transform: translateX(-50%); display: flex;
+            gap: 12px; z-index: 100;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #efefef; padding: 10px 20px;
+            border-radius: 25px; font-size: 12px;
+            cursor: pointer; backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="page1" class="page">
+        <div class="story-text">Do you like flowers?</div>
+        <div class="choice-btns">
+            <button class="choice-btn" onclick="startStory()">Yes</button>
+            <button class="choice-btn" onclick="startStory()">No</button>
+        </div>
+    </div>
+
+    <div id="page2" class="page hidden"><div class="story-text">She said flowers...</div></div>
+
+    <div id="page3" class="page hidden"><div class="story-text">So I made whole garden 🌸</div></div>
+
+    <div id="garden-page" class="page hidden">
+        <div id="garden-ui">
+            <h1 class="rose-day-text">Happy Rose Day! 🌹</h1>
+            <p>Click Anywhere to Plant Flowers</p>
+        </div>
+        <canvas id="canvas"></canvas>
+        <div class="controls">
+            <div class="btn" onclick="clearGarden()">✨ Clear</div>
+            <div class="btn" id="autoBtn" onclick="toggleAuto()">🌸 Auto Bloom</div>
+        </div>
+    </div>
+
+    <script>
+        function startStory() {
+            document.getElementById('page1').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('page2').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('page2').classList.add('hidden');
+                    document.getElementById('page3').classList.remove('hidden');
+                    setTimeout(() => {
+                        document.getElementById('page3').classList.add('hidden');
+                        document.getElementById('garden-page').classList.remove('hidden');
+                        initGarden();
+                    }, 2500);
+                }, 2000);
+            }, 500);
+        }
+
+        let flowers = [];
+        let isAuto = false;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function initGarden() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            animate();
+        }
+
+        class Flower {
+            constructor(x, y) {
+                this.startX = x;
+                this.targetY = y;
+                this.currentY = canvas.height;
+                // Rang-birange colors (Rainbow spectrum)
+                this.petalColor = `hsl(${Math.random() * 360}, 80%, 70%)`;
+                this.amplitude = Math.random() * 30 + 10;
+                this.frequency = 0.02;
+                this.state = 'growing';
+                this.size = 0;
+                this.maxSize = Math.random() * 15 + 10;
+            }
+
+            draw() {
+                // Wavy Stem
+                ctx.beginPath();
+                ctx.strokeStyle = "#1a4a11";
+                ctx.lineWidth = 2;
+                ctx.moveTo(this.startX, canvas.height);
+                for (let i = canvas.height; i > this.currentY; i -= 2) {
+                    let xOffset = Math.sin((canvas.height - i) * this.frequency) * this.amplitude;
+                    ctx.lineTo(this.startX + xOffset, i);
+                }
+                ctx.stroke();
+
+                if (this.state === 'blooming') {
+                    let finalX = this.startX + Math.sin((canvas.height - this.currentY) * this.frequency) * this.amplitude;
+                    ctx.fillStyle = this.petalColor;
+                    for (let j = 0; j < 6; j++) {
+                        ctx.beginPath();
+                        let angle = (j * 60) * Math.PI / 180;
+                        ctx.arc(finalX + Math.cos(angle) * this.size, this.currentY + Math.sin(angle) * this.size, this.size * 0.8, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.beginPath();
+                    ctx.fillStyle = "#fff";
+                    ctx.arc(finalX, this.currentY, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            update() {
+                if (this.state === 'growing') {
+                    this.currentY -= 6;
+                    if (this.currentY <= this.targetY) this.state = 'blooming';
+                } else if (this.size < this.maxSize) {
+                    this.size += 0.5;
+                }
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            flowers.forEach(f => { f.update(); f.draw(); });
+            if (isAuto && Math.random() < 0.08) {
+                flowers.push(new Flower(Math.random() * canvas.width, Math.random() * (canvas.height * 0.5) + 200));
+            }
+            requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('click', (e) => flowers.push(new Flower(e.clientX, e.clientY)));
+        function clearGarden() { flowers = []; }
+        function toggleAuto() { isAuto = !isAuto; }
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+    </script>
+</body>
+</html>
